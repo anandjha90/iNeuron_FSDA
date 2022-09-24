@@ -1,0 +1,38 @@
+--SET THE CONTEXT
+USE DATABASE DATA_PIPELINING;
+
+
+create table patients
+(
+  PATIENTID INT,
+  FIRST_NAME VARCHAR(100),
+  CITY VARCHAR(100),
+  REGISTRATIONYEAR INT
+
+);
+
+--create the stage
+create or replace stage PATIENTS_SNOW_STAGE
+url = 's3://patientsdatasnowpipe/' -- name of the bucket which you have created
+credentials = (aws_key_id = 'AKIAWNUSQEK24DDN3WP3' aws_secret_key = 'UsT6YqwfU0ag5ydUUP1gGD7UPQ6sUA335M5zueP+')
+file_format = CSV;
+
+SHOW STAGES;
+
+--CREATE SNOWPIPE THAT RECOGNISES CSV THAT ARE INGESTED FROM EXTERNAL STAGE AND COPIES THE DATA INTO PATIENTS TABLE
+--The AUTO_INGEST=true parameter specifies to read event notifications sent from an S3 bucket to an SQS queue when new data is ready to load.
+
+CREATE OR REPLACE PIPE PATIENTS_SNOWPIPE AUTO_INGEST = TRUE AS
+COPY INTO patients
+FROM @PATIENTS_SNOW_STAGE
+FILE_FORMAT = CSV;
+
+SHOW PIPES;
+
+SELECT * FROM PATIENTS;
+select count(*) from patients;
+
+alter pipe PATIENTS_SNOWPIPE refresh;
+
+select system$pipe_status('PATIENTS_SNOWPIPE');
+
